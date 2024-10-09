@@ -6,55 +6,40 @@ exports.listTransactions = async (req, res) => {
   const { search, page = 1, perPage = 10, month } = req.query;
   const query = {};
 
+  // Filter by month if provided
   if (month) {
     query.$expr = { $eq: [{ $month: "$dateOfSale" }, parseInt(month)] };
   }
+
+  // Add search conditions if the search parameter is provided
   if (search) {
-    query.$or = [
-      { title: { $regex: search, $options: "i" } },
-      { description: { $regex: search, $options: "i" } },
-      { price: { $regex: search } },
-    ];
+    const isNumber = !isNaN(parseFloat(search)) && isFinite(search); // Check if search is a number
+    if (isNumber) {
+      query.price = parseFloat(search); // Match exact price if search is a number
+    } else {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } }, // Case-insensitive title match
+        { description: { $regex: search, $options: "i" } }, // Case-insensitive description match
+        // Add more fields to search if necessary
+      ];
+    }
   }
 
   try {
+    // Paginate results
     const transactions = await Product.find(query)
       .skip((page - 1) * perPage)
       .limit(parseInt(perPage));
 
+    // Return the transactions in the response
     res.json(transactions);
   } catch (error) {
+    // Log and return the error
+    console.error("Error fetching transactions:", error);
     res.status(500).json({ error: error.message });
   }
 };
-// Statistics API
-// exports.getStatistics = async (req, res) => {
-//   const { month } = req.query;
-//   const query = {};
 
-//   if (month) {
-//     query.dateOfSale = { $regex: `-${month}-` };
-//   }
-
-//   const totalSales = await Product.aggregate([
-//     { $match: query },
-//     {
-//       $group: {
-//         _id: null,
-//         totalSaleAmount: { $sum: "$price" },
-//         totalItemsSold: { $sum: 1 },
-//       },
-//     },
-//   ]);
-
-//   const totalNotSold = await Product.countDocuments({ ...query, sold: false });
-
-//   res.json({
-//     totalSaleAmount: totalSales[0]?.totalSaleAmount || 0,
-//     totalItemsSold: totalSales[0]?.totalItemsSold || 0,
-//     totalNotSold: totalNotSold,
-//   });
-// };
 exports.getStatistics = async (req, res) => {
   const { month } = req.query;
   const query = {};

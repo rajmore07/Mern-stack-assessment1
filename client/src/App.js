@@ -30,10 +30,12 @@ const App = () => {
   const [barData, setBarData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchText, setSearchText] = useState(""); // Search state
+  const [page, setPage] = useState(1); // Page state
 
   useEffect(() => {
     fetchAllData();
-  }, [month]);
+  }, [month, searchText, page]);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -52,7 +54,7 @@ const App = () => {
   const fetchTransactions = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/transactions?month=${month}`
+        `http://localhost:5000/api/transactions?month=${month}&search=${searchText}&page=${page}`
       );
       setTransactions(res.data);
     } catch (error) {
@@ -95,6 +97,22 @@ const App = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchText(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchText("");
+  };
+
+  const handleNextPage = () => {
+    setPage((prev) => prev + 1);
+  };
+
+  const handlePreviousPage = () => {
+    setPage((prev) => (prev > 1 ? prev - 1 : 1));
+  };
+
   if (loading) {
     return <p>Loading data...</p>;
   }
@@ -109,7 +127,16 @@ const App = () => {
 
       {/* Search Bar and Month Selector */}
       <div className="search-container">
-        <button className="search-btn">Search Transaction</button>
+        <input
+          type="text"
+          className="search-input"
+          value={searchText}
+          onChange={handleSearchChange}
+          placeholder="Search by title, description, price"
+        />
+        <button className="clear-btn" onClick={handleClearSearch}>
+          Clear Search
+        </button>
         <select
           className="month-dropdown"
           value={month}
@@ -153,6 +180,14 @@ const App = () => {
           ))}
         </tbody>
       </table>
+
+      {/* Pagination Buttons */}
+      <div className="pagination">
+        <button onClick={handlePreviousPage} disabled={page === 1}>
+          Previous
+        </button>
+        <button onClick={handleNextPage}>Next</button>
+      </div>
 
       {/* Statistics Section */}
       {statistics && (
